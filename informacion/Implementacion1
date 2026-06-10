@@ -1,0 +1,195 @@
+Plan de Implementación: PWA Gamificación Onlinemente
+Este plan detalla la arquitectura, el esquema de base de datos y los pasos iniciales para construir la aplicación basándonos en los requerimientos y el diseño "Kinetic Flow" proporcionado.
+
+WARNING
+
+Archivos Vacíos Detectados Al analizar el directorio, he detectado que los archivos Datos-pwa.md y trabajadores.md que proporcionaste originalmente están completamente vacíos (0 bytes). Necesitamos su contenido para poder programar correctamente las reglas y el parseador.
+
+Open Questions
+Contenido Faltante: ¿Podrías proporcionar el contenido (o volver a subir los archivos) de Datos-pwa.md y trabajadores.md? Necesito ver el formato de los trabajadores para afinar el script de seed, y las reglas extra para el sistema.
+Almacenamiento de Imágenes: Para las fotos de los entrenamientos (actividades), ¿prefieres guardarlas localmente en el servidor (/public/uploads) o utilizar un servicio cloud (ej. AWS S3, Cloudinary)?
+1. Arquitectura y Stack Tecnológico
+Propongo un stack moderno, robusto y 100% orientado a PWA:
+
+Framework: Next.js (App Router). Permite tener Frontend y Backend en el mismo proyecto, facilitando el desarrollo rápido y optimizado.
+Estilos: Tailwind CSS. Implementaremos el sistema de diseño "Kinetic Flow" de __stitch.
+Base de Datos: PostgreSQL con Prisma ORM. Ideal para manejar relaciones complejas (Usuarios, Puntos, Insignias, Misiones).
+PWA: Paquete next-pwa para generar automáticamente el manifest.json y el Service Worker para offline/instalación.
+Autenticación: NextAuth.js (Auth.js) para manejar de forma segura los roles (Admin vs Usuario) y el inicio de sesión.
+2. Estructura de Carpetas Propuesta
+text
+
+pwa-gamificacion/
+├── prisma/
+│   ├── schema.prisma         # Esquema de la base de datos (Entidades y Relaciones)
+│   └── seed.ts               # Script para leer trabajadores.md e inicializar la DB
+├── public/
+│   ├── manifest.json         # Configuración PWA
+│   ├── logo-onlinemente.png  # Logo corporativo
+│   └── icons/                # Iconos PWA
+├── src/
+│   ├── app/
+│   │   ├── (auth)/           # Rutas: /login
+│   │   ├── (dashboard)/      # Rutas: Dashboard Usuario, Vistas de Retos, Calendario
+│   │   ├── admin/            # Rutas protegidas: CRUD de Admin (Premios, Usuarios...)
+│   │   ├── api/              # Endpoints Backend (Motor de puntos, Carga de imágenes)
+│   │   ├── layout.tsx        # Layout principal (fuentes Sora, Hanken Grotesk)
+│   │   └── page.tsx          # Landing / Redirección según rol
+│   ├── components/           # Componentes UI reutilizables (Botones, Tarjetas)
+│   └── lib/                  # Lógica de negocio (Fórmula de puntos, utilidades)
+├── tailwind.config.ts        # Colores y variables del diseño Kinetic Flow
+└── package.json
+3. Esquema de Base de Datos (Prisma)
+El modelo relacional inicial cubre todas las entidades requeridas:
+
+prisma
+
+// prisma/schema.prisma
+enum Role {
+  USER
+  ADMIN
+}
+enum Intensity {
+  SUAVE
+  MODERADO
+  TITAN
+}
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String   // Hash
+  name      String
+  role      Role     @default(USER)
+  points    Float    @default(0) // Motor de puntos estricto
+  coins     Int      @default(0)
+  levelId   String?
+  level     Level?   @relation(fields: [levelId], references: [id])
+  
+  activities Activity[]
+  steps      Step[]
+  badges     UserBadge[]
+  missions   UserMission[]
+  rewards    UserReward[]
+}
+model Activity {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type         String    // Ej: Correr, Natación
+  duration     Int       // Minutos (1h = 100pts)
+  intensity    Intensity
+  imageUrl     String?   // Ruta de la foto
+  pointsEarned Float
+  date         DateTime  @default(now())
+}
+model Step {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  count        Int      // 1 paso = 0.0001pts
+  pointsEarned Float
+  date         DateTime @default(now())
+}
+model Reward { // Premios
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  imageUrl    String?
+  pointsReq   Int
+  expiresAt   DateTime?
+  users       UserReward[]
+}
+model Challenge { // Retos
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  target      Int      
+  pointsReq   Int
+}
+model Mission { // Misiones
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  pointsReq   Int
+  users       UserMission[]
+}
+model Badge { // Insignias
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  imageUrl    String?
+  pointsReq   Int
+  users       UserBadge[]
+}
+model Level { // Niveles
+  id          String   @id @default(cuid())
+  name        String
+  pointsReq   Int
+  users       User[]
+}
+// Tablas intermedias para relación Muchos-a-Muchos
+model UserBadge {
+  userId  String
+  badgeId String
+  user    User   @relation(fields: [userId], references: [id])
+  badge   Badge  @relation(fields: [badgeId], references: [id])
+  @@id([userId, badgeId])
+}
+model UserMission {
+  userId    String
+  missionId String
+  user      User    @relation(fields: [userId], references: [id])
+  mission   Mission @relation(fields: [missionId], references: [id])
+  @@id([userId, missionId])
+}
+model UserReward {
+  userId   String
+  rewardId String
+  user     User   @relation(fields: [userId], references: [id])
+  reward   Reward @relation(fields: [rewardId], references: [id])
+  @@id([userId, rewardId])
+}
+4. Script Inicialización (Seed) - trabajadores.md
+Aquí está la estructura base del script que se ejecutará para poblar la DB.
+
+typescript
+
+// prisma/seed.ts
+import { PrismaClient } from '@prisma/client'
+import * as fs from 'fs'
+import * as path from 'path'
+import bcrypt from 'bcrypt' 
+const prisma = new PrismaClient()
+async function main() {
+  const filePath = path.join(process.cwd(), 'informacion', 'trabajadores.md')
+  
+  // Como actualmente el archivo está vacío, la lógica de parseLine se adaptará
+  // en cuanto me proporciones el contenido.
+  const fileContent = fs.readFileSync(filePath, 'utf-8')
+  const lines = fileContent.split('\n').filter(l => l.trim() !== '')
+  for (const line of lines) {
+    const [name, username, plainPassword] = parseLine(line) 
+    const hashedPassword = await bcrypt.hash(plainPassword, 10)
+    await prisma.user.upsert({
+      where: { username },
+      update: {},
+      create: {
+        name,
+        username,
+        password: hashedPassword,
+        role: 'USER', 
+      },
+    })
+  }
+  console.log('✅ Base de datos poblada exitosamente')
+}
+function parseLine(line: string) {
+  // TODO: Ajustar al formato real de trabajadores.md
+  return line.split(',').map(item => item.trim())
+}
+main().catch(e => { console.error(e); process.exit(1); }).finally(async () => { await prisma.$disconnect(); })
+Verification Plan
+El usuario debe aprobar este plan técnico y resolver las preguntas abiertas.
+Iniciar el proyecto limpio con Next.js y Tailwind CSS.
+Configurar Prisma, crear la base de datos y ejecutar el Seed real.
+Mostrar la estructura de directorios y el resultado del Seed al usuario para validación antes de programar la pantalla de Login y las UI Gamificadas.

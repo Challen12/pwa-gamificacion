@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String   // Hash
+  name      String
+  role      String   @default("USER")
+  points    Float    @default(0) // Motor de puntos estricto
+  levelId   String?
+  level     Level?   @relation(fields: [levelId], references: [id])
+  
+  activities Activity[]
+  steps      Step[]
+  badges     UserBadge[]
+  missions   UserMission[]
+  rewards    UserReward[]
+}
+
+model Activity {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type         String    // Ej: Correr, Natación
+  duration     Int       // Minutos (1h = 100pts)
+  intensity    String
+  imageUrl     String?   // Ruta de la foto
+  pointsEarned Float
+  date         DateTime  @default(now())
+}
+
+model Step {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  count        Int      // 1 paso = 0.0001pts
+  pointsEarned Float
+  date         DateTime @default(now())
+}
+
+model Reward { // Premios
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  imageUrl    String?
+  pointsReq   Int
+  expiresAt   DateTime?
+  users       UserReward[]
+}
+
+model Challenge { // Retos
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  target      Int      
+  pointsReq   Int
+}
+
+model Mission { // Misiones
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  pointsReq   Int
+  users       UserMission[]
+}
+
+model Badge { // Insignias
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  imageUrl    String?
+  pointsReq   Int
+  users       UserBadge[]
+}
+
+model Level { // Niveles
+  id          String   @id @default(cuid())
+  name        String
+  pointsReq   Int
+  users       User[]
+}
+
+// Tablas intermedias para relación Muchos-a-Muchos
+model UserBadge {
+  userId  String
+  badgeId String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge   Badge  @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  @@id([userId, badgeId])
+}
+
+model UserMission {
+  userId    String
+  missionId String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mission   Mission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  @@id([userId, missionId])
+}
+
+model UserReward {
+  userId   String
+  rewardId String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reward   Reward @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+  @@id([userId, rewardId])
+}
