@@ -59,6 +59,7 @@ model Challenge { // Retos
   id          String   @id @default(cuid())
   name        String
   description String
+  type        String   @default("pasos")
   target      Int      
   pointsReq   Int
 }
@@ -110,4 +111,10 @@ model UserReward {
   user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   reward   Reward @relation(fields: [rewardId], references: [id], onDelete: Cascade)
   @@id([userId, rewardId])
+}
+
+model Settings {
+  id                      String @id @default("global")
+  pointsPerStep           Float  @default(0.001)
+  pointsPerExerciseMinute Float  @default(1.6667)
 }

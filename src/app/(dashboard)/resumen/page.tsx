@@ -3,16 +3,23 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { CalendarView } from "./CalendarView";
 
-export default async function ResumenPage() {
+export default async function ResumenPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string; year?: string }>;
+}) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return null;
 
-  // Fecha actual para calcular el mes
-  const today = new Date();
-  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
+  const resolvedParams = await searchParams;
 
-  // Obtener actividades y pasos del usuario en el mes actual
+  const today = new Date();
+  const currentYear = resolvedParams.year ? parseInt(resolvedParams.year) : today.getFullYear();
+  const currentMonth = resolvedParams.month ? parseInt(resolvedParams.month) : today.getMonth();
+
+  const startOfMonth = new Date(currentYear, currentMonth, 1);
+  const endOfMonth = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59);
+
   const activities = await prisma.activity.findMany({
     where: {
       userId: session.user.id,
@@ -33,19 +40,18 @@ export default async function ResumenPage() {
     }
   });
 
-  // Agrupar por día (formato YYYY-MM-DD)
-  const activityByDate: Record<string, { hasActivity: boolean, details: string[] }> = {};
+  const activityByDate: Record<string, { hasActivity: boolean, steps: any[], activities: any[] }> = {};
 
   activities.forEach(act => {
     const d = act.date.toISOString().split('T')[0];
-    if (!activityByDate[d]) activityByDate[d] = { hasActivity: true, details: [] };
-    activityByDate[d].details.push(`Ejercicio: ${act.type} (${act.duration} min)`);
+    if (!activityByDate[d]) activityByDate[d] = { hasActivity: true, steps: [], activities: [] };
+    activityByDate[d].activities.push(act);
   });
 
   steps.forEach(st => {
     const d = st.date.toISOString().split('T')[0];
-    if (!activityByDate[d]) activityByDate[d] = { hasActivity: true, details: [] };
-    activityByDate[d].details.push(`Pasos: ${st.count}`);
+    if (!activityByDate[d]) activityByDate[d] = { hasActivity: true, steps: [], activities: [] };
+    activityByDate[d].steps.push(st);
   });
 
   return (
@@ -59,8 +65,8 @@ export default async function ResumenPage() {
 
       <CalendarView 
         activityData={activityByDate} 
-        currentYear={today.getFullYear()} 
-        currentMonth={today.getMonth()} 
+        currentYear={currentYear} 
+        currentMonth={currentMonth} 
       />
     </div>
   );

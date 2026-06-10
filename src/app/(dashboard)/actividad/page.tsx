@@ -1,9 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { registerSteps, registerExercise } from "@/lib/actions/activity";
+import { useState, useEffect } from "react";
+import { registerSteps, registerExercise, getStepsForDate } from "@/lib/actions/activity";
 
 export default function ActividadPage() {
+  const todayStr = new Date().toISOString().split('T')[0];
+  const [stepsDate, setStepsDate] = useState(todayStr);
+  const [exerciseDate, setExerciseDate] = useState(todayStr);
+
   const [steps, setSteps] = useState("");
   const [exerciseType, setExerciseType] = useState("");
   const [duration, setDuration] = useState("");
@@ -12,24 +16,36 @@ export default function ActividadPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
 
+  // Cargar pasos si se selecciona otra fecha
+  useEffect(() => {
+    const fetchSteps = async () => {
+      const res = await getStepsForDate(stepsDate);
+      if (res.count > 0) {
+        setSteps(res.count.toString());
+      } else {
+        setSteps("");
+      }
+    };
+    fetchSteps();
+  }, [stepsDate]);
+
   const handleStepsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setMessage("");
     
     const parsedSteps = parseInt(steps);
-    if (isNaN(parsedSteps) || parsedSteps <= 0) {
+    if (isNaN(parsedSteps) || parsedSteps < 0) {
       setMessage("Cantidad de pasos inválida");
       setIsLoading(false);
       return;
     }
 
-    const res = await registerSteps(parsedSteps);
+    const res = await registerSteps(parsedSteps, stepsDate);
     if (res.error) {
       setMessage(`Error: ${res.error}`);
     } else {
-      setMessage(`¡Conseguiste ${res.pointsEarned?.toFixed(2)} puntos por tus pasos!`);
-      setSteps("");
+      setMessage(`¡Pasos guardados exitosamente para el día ${stepsDate.split('-').reverse().join('/')}!`);
     }
     setIsLoading(false);
   };
@@ -43,6 +59,7 @@ export default function ActividadPage() {
     formData.append("type", exerciseType);
     formData.append("duration", duration);
     formData.append("intensity", intensity);
+    formData.append("date", exerciseDate);
     if (image) {
       formData.append("image", image);
     }
@@ -82,20 +99,34 @@ export default function ActividadPage() {
           <h2 className="font-headline-md text-headline-md text-on-surface">Registrar Pasos</h2>
         </div>
         <form onSubmit={handleStepsSubmit} className="flex flex-col gap-4">
-          <div>
-            <label className="font-label-tech text-label-tech text-on-surface-variant uppercase ml-1">Cantidad de pasos (Hoy)</label>
-            <div className="input-focus-effect bg-surface-container-lowest rounded-lg px-3 py-2 mt-1">
-              <input 
-                type="number" 
-                className="bg-transparent border-none w-full text-body-lg focus:ring-0 p-0 text-on-surface"
-                placeholder="Ej. 8500"
-                value={steps}
-                onChange={(e) => setSteps(e.target.value)}
-                required
-              />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="font-label-tech text-label-tech text-on-surface-variant uppercase ml-1">Fecha</label>
+              <div className="input-focus-effect bg-surface-container-lowest rounded-lg px-3 py-2 mt-1">
+                <input 
+                  type="date" 
+                  className="bg-transparent border-none w-full text-body-lg focus:ring-0 p-0 text-on-surface"
+                  value={stepsDate}
+                  onChange={(e) => setStepsDate(e.target.value)}
+                  required
+                />
+              </div>
             </div>
-            <p className="font-label-tech text-xs text-on-surface-variant/70 mt-2 ml-1">10,000 pasos = 1 punto</p>
+            <div>
+              <label className="font-label-tech text-label-tech text-on-surface-variant uppercase ml-1">Cantidad de pasos</label>
+              <div className="input-focus-effect bg-surface-container-lowest rounded-lg px-3 py-2 mt-1">
+                <input 
+                  type="number" 
+                  className="bg-transparent border-none w-full text-body-lg focus:ring-0 p-0 text-on-surface"
+                  placeholder="Ej. 8500"
+                  value={steps}
+                  onChange={(e) => setSteps(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
           </div>
+          <p className="font-label-tech text-xs text-on-surface-variant/70 ml-1">10,000 pasos = 10 puntos. Puedes editar tus pasos de días anteriores.</p>
           <button 
             type="submit" 
             disabled={isLoading}
@@ -114,17 +145,31 @@ export default function ActividadPage() {
           <h2 className="font-headline-md text-headline-md text-on-surface">Registrar Ejercicio</h2>
         </div>
         <form onSubmit={handleExerciseSubmit} className="flex flex-col gap-4">
-          <div>
-            <label className="font-label-tech text-label-tech text-on-surface-variant uppercase ml-1">Tipo de Ejercicio</label>
-            <div className="input-focus-effect bg-surface-container-lowest rounded-lg px-3 py-2 mt-1">
-              <input 
-                type="text" 
-                className="bg-transparent border-none w-full text-body-lg focus:ring-0 p-0 text-on-surface"
-                placeholder="Ej. Correr, Natación, Yoga..."
-                value={exerciseType}
-                onChange={(e) => setExerciseType(e.target.value)}
-                required
-              />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="font-label-tech text-label-tech text-on-surface-variant uppercase ml-1">Fecha</label>
+              <div className="input-focus-effect bg-surface-container-lowest rounded-lg px-3 py-2 mt-1">
+                <input 
+                  type="date" 
+                  className="bg-transparent border-none w-full text-body-lg focus:ring-0 p-0 text-on-surface"
+                  value={exerciseDate}
+                  onChange={(e) => setExerciseDate(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+            <div>
+              <label className="font-label-tech text-label-tech text-on-surface-variant uppercase ml-1">Tipo de Ejercicio</label>
+              <div className="input-focus-effect bg-surface-container-lowest rounded-lg px-3 py-2 mt-1">
+                <input 
+                  type="text" 
+                  className="bg-transparent border-none w-full text-body-lg focus:ring-0 p-0 text-on-surface"
+                  placeholder="Ej. Correr, Natación..."
+                  value={exerciseType}
+                  onChange={(e) => setExerciseType(e.target.value)}
+                  required
+                />
+              </div>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">

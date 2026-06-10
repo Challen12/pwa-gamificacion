@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Image from "next/image";
+import { calculateLevelData } from "@/lib/levels";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -24,9 +25,12 @@ export default async function DashboardPage() {
     _sum: { count: true }
   });
 
+  const levelData = calculateLevelData(dbUser?.points || 0);
+
   const user = {
     name: dbUser?.name || session.user.name || "Usuario",
-    level: 1, // To be calculated later based on points
+    level: levelData.level,
+    title: levelData.title,
     points: dbUser?.points || 0,
     rank: 1, // To be calculated later
     steps: todayStepsData._sum.count || 0,
@@ -50,15 +54,17 @@ export default async function DashboardPage() {
           </div>
         </div>
         <h1 className="font-headline-md text-headline-md text-on-surface mb-1 z-10">{user.name}</h1>
-        <p className="font-body-md text-body-md text-on-surface-variant mb-4 z-10">Corredor Principiante</p>
+        <p className="font-body-md text-body-md text-on-surface-variant mb-4 z-10">{user.title}</p>
         
         <div className="w-full z-10">
           <div className="flex justify-between font-label-tech text-label-tech text-on-surface-variant mb-2">
             <span>Exp. Nivel {user.level}</span>
-            <span>{user.points} / 2,000 XP</span>
+            <span>
+              {user.level === 100 ? 'NIVEL MÁXIMO' : `${Math.floor(levelData.currentLevelPoints).toLocaleString('es-ES')} / ${levelData.pointsToNext.toLocaleString('es-ES')} pts`}
+            </span>
           </div>
           <div className="h-3 w-full bg-surface-container-high rounded-full overflow-hidden">
-            <div className="h-full bg-secondary rounded-full progress-bar-fill" style={{ width: "62.5%" }}></div>
+            <div className="h-full bg-secondary rounded-full progress-bar-fill transition-all duration-1000" style={{ width: `${levelData.progressPercentage}%` }}></div>
           </div>
         </div>
       </section>
