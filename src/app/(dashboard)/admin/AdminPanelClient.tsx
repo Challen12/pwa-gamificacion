@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { 
   updateSettings, updateUser, deleteUser, 
   createReward, deleteReward, 
-  createChallenge, deleteChallenge 
+  createChallenge, deleteChallenge, updateChallenge
 } from "@/lib/actions/admin";
 
 export function AdminPanelClient({ users, rewards, challenges, settings }: any) {
@@ -92,6 +92,41 @@ export function AdminPanelClient({ users, rewards, challenges, settings }: any) 
   };
 
   // ---- RETOS ----
+  const [editingChallengeId, setEditingChallengeId] = useState<string | null>(null);
+  const [editChallengeName, setEditChallengeName] = useState("");
+  const [editChallengeDesc, setEditChallengeDesc] = useState("");
+  const [editChallengeType, setEditChallengeType] = useState("");
+  const [editChallengeTarget, setEditChallengeTarget] = useState("");
+  const [editChallengePoints, setEditChallengePoints] = useState("");
+
+  const startEditChallenge = (c: any) => {
+    setEditingChallengeId(c.id);
+    setEditChallengeName(c.name);
+    setEditChallengeDesc(c.description);
+    setEditChallengeType(c.type);
+    setEditChallengeTarget(c.target.toString());
+    setEditChallengePoints(c.pointsReq.toString());
+  };
+
+  const handleSaveChallenge = async (e: React.FormEvent, id: string) => {
+    e.preventDefault();
+    setLoading(true);
+    const formData = new FormData();
+    formData.append("name", editChallengeName);
+    formData.append("description", editChallengeDesc);
+    formData.append("type", editChallengeType);
+    formData.append("target", editChallengeTarget);
+    formData.append("pointsReq", editChallengePoints);
+    
+    const res = await updateChallenge(id, formData);
+    if (res.error) handleMessage(res.error, true);
+    else {
+      handleMessage("Reto actualizado.");
+      setEditingChallengeId(null);
+    }
+    setLoading(false);
+  };
+
   const handleCreateChallenge = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
@@ -231,12 +266,38 @@ export function AdminPanelClient({ users, rewards, challenges, settings }: any) 
           <div className="flex flex-col gap-2">
             <h3 className="font-headline-sm text-on-surface px-1">Retos Activos</h3>
             {challenges.map((c: any) => (
-              <div key={c.id} className="glass-card rounded-xl p-3 border border-outline-variant/30 flex justify-between items-center">
-                <div>
-                  <h4 className="font-body-md font-bold">{c.name} <span className="text-xs font-normal opacity-70">({c.type})</span></h4>
-                  <p className="text-xs text-tertiary font-label-tech">Meta: {c.target} | Premio: {c.pointsReq} pts</p>
-                </div>
-                <button onClick={() => handleDeleteChallenge(c.id)} className="text-error/70 hover:text-error p-1"><span className="material-symbols-outlined text-sm">delete</span></button>
+              <div key={c.id} className="glass-card rounded-xl p-3 border border-outline-variant/30 flex flex-col gap-3">
+                {editingChallengeId === c.id ? (
+                  <form onSubmit={(e) => handleSaveChallenge(e, c.id)} className="flex flex-col gap-3 bg-surface p-3 rounded-lg border border-tertiary/20">
+                    <div className="flex justify-between items-center">
+                      <span className="font-headline-sm text-tertiary">Editar Reto</span>
+                      <button type="button" onClick={() => setEditingChallengeId(null)} className="text-on-surface-variant hover:text-error material-symbols-outlined text-sm">close</button>
+                    </div>
+                    <input className="input-focus-effect bg-surface-container-lowest rounded px-2 py-1 text-sm focus:outline-none" value={editChallengeName} onChange={e => setEditChallengeName(e.target.value)} required />
+                    <textarea className="input-focus-effect bg-surface-container-lowest rounded px-2 py-1 text-sm focus:outline-none" value={editChallengeDesc} onChange={e => setEditChallengeDesc(e.target.value)} required />
+                    <select className="input-focus-effect bg-surface-container-lowest rounded px-2 py-1 text-sm focus:outline-none" value={editChallengeType} onChange={e => setEditChallengeType(e.target.value)} required>
+                      <option value="pasos">Pasos</option>
+                      <option value="ejercicios">Ejercicios (minutos)</option>
+                      <option value="puntos">Puntos Totales</option>
+                    </select>
+                    <div className="flex gap-2">
+                      <input type="number" className="input-focus-effect bg-surface-container-lowest rounded px-2 py-1 text-sm focus:outline-none w-1/2" value={editChallengeTarget} onChange={e => setEditChallengeTarget(e.target.value)} required />
+                      <input type="number" className="input-focus-effect bg-surface-container-lowest rounded px-2 py-1 text-sm focus:outline-none w-1/2" value={editChallengePoints} onChange={e => setEditChallengePoints(e.target.value)} required />
+                    </div>
+                    <button type="submit" disabled={loading} className="bg-tertiary text-on-tertiary py-1.5 rounded text-sm font-label-tech uppercase mt-1">Guardar</button>
+                  </form>
+                ) : (
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h4 className="font-body-md font-bold">{c.name} <span className="text-xs font-normal opacity-70">({c.type})</span></h4>
+                      <p className="text-xs text-tertiary font-label-tech">Meta: {c.target} | Premio: {c.pointsReq} pts</p>
+                    </div>
+                    <div className="flex gap-1">
+                      <button onClick={() => startEditChallenge(c)} className="text-tertiary/70 hover:text-tertiary p-1"><span className="material-symbols-outlined text-sm">edit</span></button>
+                      <button onClick={() => handleDeleteChallenge(c.id)} className="text-error/70 hover:text-error p-1"><span className="material-symbols-outlined text-sm">delete</span></button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>

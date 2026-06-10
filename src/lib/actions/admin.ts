@@ -152,3 +152,34 @@ export async function deleteChallenge(id: string) {
   revalidatePath("/retos");
   return { success: true };
 }
+
+export async function updateChallenge(id: string, formData: FormData) {
+  const session = await getServerSession(authOptions);
+  checkAdmin(session);
+
+  const name = formData.get("name") as string;
+  const description = formData.get("description") as string;
+  const type = formData.get("type") as string;
+  const targetStr = formData.get("target") as string;
+  const pointsReqStr = formData.get("pointsReq") as string;
+
+  const target = parseInt(targetStr);
+  const pointsReq = parseInt(pointsReqStr);
+
+  if (!name || !description || !type || isNaN(target) || isNaN(pointsReq)) {
+    return { error: "Faltan campos obligatorios." };
+  }
+
+  try {
+    await prisma.challenge.update({
+      where: { id },
+      data: { name, description, type, target, pointsReq }
+    });
+    revalidatePath("/admin");
+    revalidatePath("/retos");
+    return { success: true };
+  } catch (e) {
+    return { error: "Error al actualizar el reto." };
+  }
+}
+

@@ -181,10 +181,21 @@ export function CalendarView({ activityData, currentYear, currentMonth }: Calend
           </h3>
           
           {!activityData[selectedDate]?.hasActivity ? (
-            <p className="text-on-surface-variant font-body-md bg-error/10 p-3 rounded-lg border border-error/20 flex gap-2 items-start">
-              <span className="material-symbols-outlined text-error">notification_important</span>
-              <span>No registraste actividad este día.</span>
-            </p>
+            <div className="flex flex-col gap-3">
+              <p className="text-on-surface-variant font-body-md bg-error/10 p-3 rounded-lg border border-error/20 flex gap-2 items-start">
+                <span className="material-symbols-outlined text-error">notification_important</span>
+                <span>{selectedDate > todayStr ? "No viajes en el tiempo McFly 🚗⚡" : "No registraste actividad este día."}</span>
+              </p>
+              {selectedDate <= todayStr && (
+                <button 
+                  onClick={() => router.push(`/actividad?date=${selectedDate}`)}
+                  className="bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors py-2.5 px-4 rounded-xl font-label-tech uppercase flex items-center justify-center gap-2 mt-1 w-full"
+                >
+                  <span className="material-symbols-outlined text-[18px]">add_circle</span>
+                  Añadir Actividad
+                </button>
+              )}
+            </div>
           ) : (
             <div className="flex flex-col gap-4">
               {/* Pasos */}

@@ -8,6 +8,17 @@ export default function ActividadPage() {
   const [stepsDate, setStepsDate] = useState(todayStr);
   const [exerciseDate, setExerciseDate] = useState(todayStr);
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const d = params.get("date");
+      if (d) {
+        setStepsDate(d);
+        setExerciseDate(d);
+      }
+    }
+  }, []);
+
   const [steps, setSteps] = useState("");
   const [exerciseType, setExerciseType] = useState("");
   const [duration, setDuration] = useState("");
@@ -108,6 +119,7 @@ export default function ActividadPage() {
                   className="bg-transparent border-none w-full text-body-lg focus:ring-0 p-0 text-on-surface"
                   value={stepsDate}
                   onChange={(e) => setStepsDate(e.target.value)}
+                  max={todayStr}
                   required
                 />
               </div>
@@ -154,6 +166,7 @@ export default function ActividadPage() {
                   className="bg-transparent border-none w-full text-body-lg focus:ring-0 p-0 text-on-surface"
                   value={exerciseDate}
                   onChange={(e) => setExerciseDate(e.target.value)}
+                  max={todayStr}
                   required
                 />
               </div>

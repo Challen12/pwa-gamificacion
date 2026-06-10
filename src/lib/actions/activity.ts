@@ -10,6 +10,8 @@ import { join } from "path";
 import { writeFile } from "fs/promises";
 import { v4 as uuidv4 } from "uuid";
 
+import { checkUserChallenges } from "./challengesLogic";
+
 /**
  * Obtiene los pasos de una fecha concreta
  */
@@ -97,9 +99,11 @@ export async function registerSteps(steps: number, dateStr: string) {
       }
     });
 
+    await checkUserChallenges(session.user.id);
     revalidatePath("/dashboard");
     revalidatePath("/actividad");
     revalidatePath("/resumen");
+    revalidatePath("/retos");
     return { success: true };
   } catch (err) {
     console.error(err);
@@ -184,9 +188,11 @@ export async function registerExercise(formData: FormData) {
       });
     });
 
+    await checkUserChallenges(session.user.id);
     revalidatePath("/dashboard");
     revalidatePath("/actividad");
     revalidatePath("/resumen");
+    revalidatePath("/retos");
     return { success: true, pointsEarned };
   } catch (err) {
     console.error(err);
@@ -270,7 +276,7 @@ export async function updateActivity(activityId: string, formData: FormData) {
   const newPointsEarned = duration * settings.pointsPerExerciseMinute;
 
   try {
-    await prisma.$transaction(async (tx) => {
+    const targetUserId = await prisma.$transaction(async (tx) => {
       const act = await tx.activity.findUnique({ where: { id: activityId } });
       if (!act || (act.userId !== session.user.id && session.user.role !== "ADMIN")) throw new Error("No autorizado");
 
@@ -292,10 +298,13 @@ export async function updateActivity(activityId: string, formData: FormData) {
           data: { points: { increment: diffPoints } }
         });
       }
+      return act.userId;
     });
 
+    await checkUserChallenges(targetUserId);
     revalidatePath("/dashboard");
     revalidatePath("/resumen");
+    revalidatePath("/retos");
     return { success: true };
   } catch (e) {
     return { error: "Error al actualizar el ejercicio." };
@@ -316,7 +325,7 @@ export async function updateStep(stepId: string, count: number) {
   const newPointsEarned = count * pointsRate;
 
   try {
-    await prisma.$transaction(async (tx) => {
+    const targetUserId = await prisma.$transaction(async (tx) => {
       const step = await tx.step.findUnique({ where: { id: stepId } });
       if (!step || (step.userId !== session.user.id && session.user.role !== "ADMIN")) throw new Error("No autorizado");
 
@@ -336,10 +345,13 @@ export async function updateStep(stepId: string, count: number) {
           data: { points: { increment: diffPoints } }
         });
       }
+      return step.userId;
     });
 
+    await checkUserChallenges(targetUserId);
     revalidatePath("/dashboard");
     revalidatePath("/resumen");
+    revalidatePath("/retos");
     return { success: true };
   } catch (e) {
     return { error: "Error al actualizar los pasos." };

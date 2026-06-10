@@ -12,6 +12,7 @@ model User {
   username  String   @unique
   password  String   // Hash
   name      String
+  avatarUrl String?
   role      String   @default("USER")
   points    Float    @default(0) // Motor de puntos estricto
   levelId   String?
@@ -22,6 +23,7 @@ model User {
   badges     UserBadge[]
   missions   UserMission[]
   rewards    UserReward[]
+  challenges UserChallenge[]
 }
 
 model Activity {
@@ -62,6 +64,7 @@ model Challenge { // Retos
   type        String   @default("pasos")
   target      Int      
   pointsReq   Int
+  users       UserChallenge[]
 }
 
 model Mission { // Misiones
@@ -111,6 +114,15 @@ model UserReward {
   user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   reward   Reward @relation(fields: [rewardId], references: [id], onDelete: Cascade)
   @@id([userId, rewardId])
+}
+
+model UserChallenge {
+  userId      String
+  challengeId String
+  completedAt DateTime @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  @@id([userId, challengeId])
 }
 
 model Settings {

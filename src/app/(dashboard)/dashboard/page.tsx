@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Image from "next/image";
+import Link from "next/link";
 import { calculateLevelData } from "@/lib/levels";
 
 export default async function DashboardPage() {
@@ -25,6 +26,13 @@ export default async function DashboardPage() {
     _sum: { count: true }
   });
 
+  const completedChallenges = await prisma.userChallenge.findMany({
+    where: { userId: session.user.id },
+    include: { challenge: true },
+    orderBy: { completedAt: 'desc' },
+    take: 3
+  });
+
   const levelData = calculateLevelData(dbUser?.points || 0);
 
   const user = {
@@ -42,18 +50,22 @@ export default async function DashboardPage() {
       {/* Header Perfil */}
       <section className="glass-card rounded-xl p-6 flex flex-col items-center relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary-container/10"></div>
-        <button className="absolute top-4 right-4 text-on-surface-variant hover:text-primary transition-colors z-10 p-2 rounded-full hover:bg-surface-variant/50">
+        <Link href="/perfil" className="absolute top-4 right-4 text-on-surface-variant hover:text-primary transition-colors z-10 p-2 rounded-full hover:bg-surface-variant/50">
           <span className="material-symbols-outlined">settings</span>
-        </button>
-        <div className="relative z-10 w-24 h-24 rounded-full p-1 bg-gradient-to-br from-primary to-secondary-fixed mb-4">
-          <div className="w-full h-full rounded-full overflow-hidden border-2 border-surface bg-surface-container flex items-center justify-center text-primary font-bold text-2xl">
-            {user.name.charAt(0)}
+        </Link>
+        <Link href="/perfil" className="relative z-10 w-24 h-24 rounded-full p-1 bg-gradient-to-br from-primary to-secondary-fixed mb-4 hover:scale-105 transition-transform">
+          <div className="w-full h-full rounded-full overflow-hidden border-2 border-surface bg-surface-container flex items-center justify-center text-primary font-bold text-2xl relative">
+            {dbUser?.avatarUrl ? (
+              <Image src={dbUser.avatarUrl} alt="Avatar" fill className="object-cover" sizes="96px" unoptimized />
+            ) : (
+              user.name.charAt(0)
+            )}
           </div>
           <div className="absolute -bottom-2 -right-2 bg-primary text-on-primary font-label-tech text-label-tech px-2 py-1 rounded-full border-2 border-surface shadow-sm">
             Nvl {user.level}
           </div>
-        </div>
-        <h1 className="font-headline-md text-headline-md text-on-surface mb-1 z-10">{user.name}</h1>
+        </Link>
+        <Link href="/perfil" className="font-headline-md text-headline-md text-on-surface mb-1 z-10 hover:text-primary transition-colors">{user.name}</Link>
         <p className="font-body-md text-body-md text-on-surface-variant mb-4 z-10">{user.title}</p>
         
         <div className="w-full z-10">
@@ -128,6 +140,34 @@ export default async function DashboardPage() {
           </div>
         </div>
       </section>
+
+      {/* Retos Completados */}
+      {completedChallenges.length > 0 && (
+        <section className="glass-card rounded-xl p-5 mb-4 border border-secondary/20">
+          <h2 className="font-headline-sm text-on-surface mb-3 flex items-center gap-2">
+            <span className="material-symbols-outlined text-secondary">verified</span>
+            Últimos Retos Completados
+          </h2>
+          <div className="flex flex-col gap-2">
+            {completedChallenges.map(uc => (
+              <div key={uc.challengeId} className="bg-surface-container-low p-3 rounded-lg flex justify-between items-center border border-outline-variant/30">
+                <div className="flex items-center gap-3">
+                  <div className="bg-secondary/20 p-2 rounded-full text-secondary">
+                    <span className="material-symbols-outlined text-sm">emoji_events</span>
+                  </div>
+                  <div>
+                    <h3 className="font-body-md font-bold text-on-surface">{uc.challenge.name}</h3>
+                    <p className="text-xs text-on-surface-variant font-label-tech">{uc.completedAt.toLocaleDateString()}</p>
+                  </div>
+                </div>
+                <span className="text-secondary font-label-tech text-xs bg-secondary/10 px-2 py-1 rounded-full">+{uc.challenge.pointsReq} pts</span>
+              </div>
+            ))}
+          </div>
+          <a href="/retos" className="block text-center text-sm text-primary hover:underline mt-4 font-label-tech">Ver todos los retos</a>
+        </section>
+      )}
+
     </>
   );
 }

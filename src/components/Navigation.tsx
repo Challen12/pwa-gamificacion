@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import Image from "next/image";
+import { useState } from "react";
 
 export function TopBar() {
   const pathname = usePathname();
@@ -58,9 +59,12 @@ export function TopBar() {
 
       <div className="flex items-center gap-4">
         {session?.user && (
-          <span className="hidden md:block font-body-md text-on-surface-variant mr-2 border-r border-outline-variant/30 pr-4">
-            {session.user.name}
-          </span>
+          <Link href="/perfil" className="hidden md:flex items-center gap-2 hover:text-primary transition-colors border-r border-outline-variant/30 pr-4 mr-2">
+            <span className="material-symbols-outlined text-[20px]">account_circle</span>
+            <span className="font-body-md text-on-surface-variant font-medium">
+              {session.user.name}
+            </span>
+          </Link>
         )}
         <button 
           onClick={() => signOut({ callbackUrl: "/login" })}
@@ -78,45 +82,92 @@ export function TopBar() {
 export function BottomNav() {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  const links = [
+  const mainLinks = [
     { href: "/dashboard", icon: "dashboard", label: "Home" },
-    { href: "/premios", icon: "redeem", label: "Premios" },
-    { href: "/retos", icon: "emoji_events", label: "Retos" },
     { href: "/actividad", icon: "calendar_today", label: "Actividad" },
     { href: "/resumen", icon: "grid_on", label: "Resumen" },
     { href: "/niveles", icon: "leaderboard", label: "Niveles", fill: true },
   ];
 
+  const menuLinks = [
+    { href: "/perfil", icon: "manage_accounts", label: "Perfil" },
+    { href: "/premios", icon: "redeem", label: "Premios" },
+    { href: "/retos", icon: "emoji_events", label: "Retos" },
+  ];
+
   if (session?.user?.role === "ADMIN") {
-    links.push({ href: "/admin", icon: "admin_panel_settings", label: "Admin" });
+    menuLinks.push({ href: "/admin", icon: "admin_panel_settings", label: "Admin" });
   }
 
   return (
-    <nav className="fixed bottom-0 w-full z-50 rounded-t-xl backdrop-blur-md border-t border-outline-variant/20 shadow-[0_-4px_20px_0_rgba(80,92,115,0.1)] bg-surface/80 flex justify-around items-center px-4 py-2 pb-safe-area md:hidden">
-      {links.map((link) => {
-        const isActive = pathname === link.href;
-        
-        return (
-          <Link 
-            key={link.href}
-            href={link.href}
-            className={`flex flex-col items-center justify-center px-4 py-1.5 transition-all duration-200 active:scale-90 ${
-              isActive 
-                ? "bg-primary-container text-on-primary-container rounded-full" 
-                : "text-on-surface-variant hover:bg-surface-variant/50"
-            }`}
-          >
-            <span 
-              className="material-symbols-outlined" 
-              style={link.fill && isActive ? { fontVariationSettings: "'FILL' 1" } : undefined}
+    <>
+      {/* Overlay del Menú Hamburguesa */}
+      {menuOpen && (
+        <>
+          <div 
+            className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm md:hidden"
+            onClick={() => setMenuOpen(false)}
+          ></div>
+          <div className="fixed bottom-[80px] right-4 z-50 bg-surface rounded-xl shadow-lg border border-outline-variant/30 flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in md:hidden">
+            {menuLinks.map((link) => {
+              const isActive = pathname === link.href;
+              return (
+                <Link 
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMenuOpen(false)}
+                  className={`flex items-center gap-3 px-6 py-4 transition-colors ${
+                    isActive ? "bg-primary/10 text-primary" : "text-on-surface hover:bg-surface-variant"
+                  }`}
+                >
+                  <span className="material-symbols-outlined">{link.icon}</span>
+                  <span className="font-body-md font-semibold">{link.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {/* Barra Inferior */}
+      <nav className="fixed bottom-0 w-full z-50 rounded-t-xl backdrop-blur-md border-t border-outline-variant/20 shadow-[0_-4px_20px_0_rgba(80,92,115,0.1)] bg-surface/80 flex justify-around items-center px-2 py-2 pb-safe-area md:hidden">
+        {mainLinks.map((link) => {
+          const isActive = pathname === link.href;
+          
+          return (
+            <Link 
+              key={link.href}
+              href={link.href}
+              className={`flex flex-col items-center justify-center px-3 py-1.5 transition-all duration-200 active:scale-90 ${
+                isActive 
+                  ? "bg-primary-container text-on-primary-container rounded-full" 
+                  : "text-on-surface-variant hover:bg-surface-variant/50"
+              }`}
             >
-              {link.icon}
-            </span>
-            <span className="font-label-tech text-label-tech mt-1">{link.label}</span>
-          </Link>
-        );
-      })}
-    </nav>
+              <span 
+                className="material-symbols-outlined" 
+                style={link.fill && isActive ? { fontVariationSettings: "'FILL' 1" } : undefined}
+              >
+                {link.icon}
+              </span>
+              <span className="font-label-tech text-[10px] mt-1">{link.label}</span>
+            </Link>
+          );
+        })}
+        
+        {/* Botón de Menú Hamburguesa */}
+        <button 
+          onClick={() => setMenuOpen(!menuOpen)}
+          className={`flex flex-col items-center justify-center px-3 py-1.5 transition-all duration-200 active:scale-90 ${
+            menuOpen ? "text-primary" : "text-on-surface-variant"
+          }`}
+        >
+          <span className="material-symbols-outlined">{menuOpen ? "close" : "menu"}</span>
+          <span className="font-label-tech text-[10px] mt-1">Más</span>
+        </button>
+      </nav>
+    </>
   );
 }
