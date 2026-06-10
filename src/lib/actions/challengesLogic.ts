@@ -45,7 +45,7 @@ export async function checkUserChallenges(userId: string) {
 
   // 4. Comprobar cada reto
   let totalPointsEarned = 0;
-  const challengesToMark = [];
+  const challengesToMark: string[] = [];
 
   for (const c of uncompletedChallenges) {
     let completed = false;
@@ -55,7 +55,7 @@ export async function checkUserChallenges(userId: string) {
     else if (c.type === 'puntos' && user.points >= c.target) completed = true;
 
     if (completed) {
-      challengesToMark.push(c);
+      challengesToMark.push(c.id);
       totalPointsEarned += c.pointsReq; // El campo pointsReq es la recompensa del reto
     }
   }
@@ -66,7 +66,7 @@ export async function checkUserChallenges(userId: string) {
       // Crear registros de que los ha completado
       for (const c of challengesToMark) {
         await tx.userChallenge.create({
-          data: { userId, challengeId: c.id }
+          data: { userId, challengeId: c }
         });
       }
       

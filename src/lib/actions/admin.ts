@@ -42,17 +42,18 @@ export async function getUsers() {
   });
 }
 
-export async function updateUser(userId: string, data: { name?: string; role?: string; password?: string }) {
+export async function updateUser(id: string, data: { name?: string; role?: string; points?: number; password?: string }) {
   const session = await getServerSession(authOptions);
   checkAdmin(session);
   
   const updateData: any = {};
   if (data.name) updateData.name = data.name;
   if (data.role) updateData.role = data.role;
+  if (data.points !== undefined) updateData.points = data.points;
   if (data.password) updateData.password = await bcrypt.hash(data.password, 10);
   
   await prisma.user.update({
-    where: { id: userId },
+    where: { id: id },
     data: updateData
   });
   

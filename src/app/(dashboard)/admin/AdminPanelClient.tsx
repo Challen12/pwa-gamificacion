@@ -27,7 +27,7 @@ export function AdminPanelClient({ users, rewards, challenges, settings }: any) 
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const res = await updateSettings(parseFloat(pointsPerStep), parseFloat(pointsPerExerciseMinute));
+    const res = await updateSettings(parseFloat(pointsPerStep), parseFloat(pointsPerExerciseMinute)) as any;
     if (res.error) handleMessage(res.error, true);
     else handleMessage("Configuración guardada exitosamente.");
     setLoading(false);
@@ -36,13 +36,15 @@ export function AdminPanelClient({ users, rewards, challenges, settings }: any) 
   // ---- USUARIOS ----
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [editUserName, setEditUserName] = useState("");
-  const [editUserRole, setEditUserRole] = useState("");
+  const [editUserRole, setEditUserRole] = useState("USER");
+  const [editUserPoints, setEditUserPoints] = useState("");
   const [editUserPassword, setEditUserPassword] = useState("");
 
   const startEditUser = (u: any) => {
     setEditingUserId(u.id);
     setEditUserName(u.name);
     setEditUserRole(u.role);
+    setEditUserPoints(u.points.toString());
     setEditUserPassword("");
   };
 
@@ -51,8 +53,9 @@ export function AdminPanelClient({ users, rewards, challenges, settings }: any) 
     const res = await updateUser(id, {
       name: editUserName,
       role: editUserRole,
+      points: parseFloat(editUserPoints),
       password: editUserPassword || undefined
-    });
+    }) as any;
     if (res.error) handleMessage(res.error, true);
     else {
       handleMessage("Usuario actualizado.");
@@ -64,7 +67,7 @@ export function AdminPanelClient({ users, rewards, challenges, settings }: any) 
   const handleDeleteUser = async (id: string) => {
     if (!confirm("¿Seguro que quieres borrar este usuario y toda su actividad? Esta acción es irreversible.")) return;
     setLoading(true);
-    const res = await deleteUser(id);
+    const res = await deleteUser(id) as any;
     if (res.error) handleMessage(res.error, true);
     else handleMessage("Usuario eliminado.");
     setLoading(false);
@@ -75,7 +78,7 @@ export function AdminPanelClient({ users, rewards, challenges, settings }: any) 
     e.preventDefault();
     setLoading(true);
     const formData = new FormData(e.currentTarget);
-    const res = await createReward(formData);
+    const res = await createReward(formData) as any;
     if (res.error) handleMessage(res.error, true);
     else {
       handleMessage("Premio creado exitosamente.");
@@ -87,7 +90,9 @@ export function AdminPanelClient({ users, rewards, challenges, settings }: any) 
   const handleDeleteReward = async (id: string) => {
     if (!confirm("¿Borrar premio?")) return;
     setLoading(true);
-    await deleteReward(id);
+    const res = await deleteReward(id) as any;
+    if (res.error) handleMessage(res.error, true);
+    else handleMessage("Premio eliminado.");
     setLoading(false);
   };
 
@@ -118,10 +123,10 @@ export function AdminPanelClient({ users, rewards, challenges, settings }: any) 
     formData.append("target", editChallengeTarget);
     formData.append("pointsReq", editChallengePoints);
     
-    const res = await updateChallenge(id, formData);
+    const res = await updateChallenge(id, formData) as any;
     if (res.error) handleMessage(res.error, true);
     else {
-      handleMessage("Reto actualizado.");
+      handleMessage("Reto actualizado exitosamente.");
       setEditingChallengeId(null);
     }
     setLoading(false);
@@ -131,7 +136,7 @@ export function AdminPanelClient({ users, rewards, challenges, settings }: any) 
     e.preventDefault();
     setLoading(true);
     const formData = new FormData(e.currentTarget);
-    const res = await createChallenge(formData);
+    const res = await createChallenge(formData) as any;
     if (res.error) handleMessage(res.error, true);
     else {
       handleMessage("Reto creado exitosamente.");
@@ -184,6 +189,7 @@ export function AdminPanelClient({ users, rewards, challenges, settings }: any) 
                     <option value="USER">USER</option>
                     <option value="ADMIN">ADMIN</option>
                   </select>
+                  <input type="number" step="0.01" className="input-focus-effect bg-surface-container-lowest rounded px-2 py-1 text-sm focus:outline-none" value={editUserPoints} onChange={e => setEditUserPoints(e.target.value)} placeholder="Puntos" />
                   <input className="input-focus-effect bg-surface-container-lowest rounded px-2 py-1 text-sm focus:outline-none" value={editUserPassword} onChange={e => setEditUserPassword(e.target.value)} placeholder="Nueva contraseña (dejar blanco si no cambia)" type="password" />
                   <button onClick={() => handleSaveUser(u.id)} disabled={loading} className="bg-primary text-on-primary py-1.5 rounded text-sm font-label-tech uppercase mt-1">Guardar</button>
                 </div>
